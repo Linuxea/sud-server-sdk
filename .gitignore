@@ -1,0 +1,13 @@
+# 编译产物
+*.exe
+*.test
+*.out
+sud-server-sdk
+
+# IDE
+.idea/
+.vscode/
+
+# 本地环境配置
+*.local.yaml
+.env
