@@ -41,7 +41,9 @@ type AIPlayer struct {
 type AiAddReqData struct {
 	RoomID    string     `json:"room_id"`
 	AIPlayers []AIPlayer `json:"ai_players"`
-	IsReady   int        `json:"is_ready"` // 1:加入后自动准备 0:不自动准备
+	// IsReady 加入后是否自动准备。必发字段：不设置时显式发送 0（不自动准备），
+	// 与服务端默认值 1 不同，按需显式赋值。
+	IsReady int `json:"is_ready"`
 }
 
 // AiAddRespData 加入 AI 响应。
@@ -93,8 +95,10 @@ type LLMAIPlayer struct {
 type LLMAiAddReqData struct {
 	RoomID    string        `json:"room_id"`
 	AIPlayers []LLMAIPlayer `json:"ai_players"`
-	IsEnter   int           `json:"is_enter"` // 1:自动上座位 0:不自动
-	IsReady   int           `json:"is_ready"` // 1:自动准备 0:不自动
+	// IsEnter / IsReady 必发字段：不设置时显式发送 0（不自动上座位/不自动准备），
+	// 与服务端默认行为不同，按需显式赋值。
+	IsEnter int `json:"is_enter"`
+	IsReady int `json:"is_ready"`
 }
 
 // LLMAiExitReqData 大模型 AI 退出。
@@ -127,6 +131,8 @@ type PlayerAssetRespData struct {
 
 // QuickStartReqData 一键开始游戏。
 // 注意：不要把机器人放在 user_infos 第一个位置。
+// （文档描述提到 user_infos 为空时可回退 codes 字段，但其参数表未定义 codes，
+// 本 SDK 不建模；如服务端实际支持需自行扩展。）
 type QuickStartReqData struct {
 	UserInfos            []QuickStartUserInfo `json:"user_infos"`
 	RoomID               string               `json:"room_id"`
@@ -207,17 +213,20 @@ type UserInBatchReqData struct {
 }
 
 // UserInReqData 用户加入。
-// UserInfo 优先使用；为空时使用 Code。
+// UserInfo 与 Code 二选一：UserInfo 优先；为 nil 时使用 Code。
 type UserInReqData struct {
-	Code         string   `json:"code,omitempty"`
-	UserInfo     UserInfo `json:"user_info,omitempty"`
-	RoomID       string   `json:"room_id"`
-	Mode         int32    `json:"mode"`
-	Language     string   `json:"language,omitempty"`
-	SeatIndex    int32    `json:"seat_index,omitempty"`
-	IsSeatRandom bool     `json:"is_seat_random,omitempty"`
-	TeamID       int32    `json:"team_id,omitempty"`
-	IsReady      bool     `json:"is_ready,omitempty"`
+	Code string `json:"code,omitempty"`
+	// UserInfo 注意必须用指针：值类型空对象无法被 omitempty 省略，
+	// 会导致 Code 回退路径失效（服务端会优先采用空的 user_info）。
+	UserInfo *UserInfo `json:"user_info,omitempty"`
+	RoomID   string    `json:"room_id"`
+	// Mode 游戏模式。省略时服务端默认 1；显式设置 0 会发送 0（无默认保护）。
+	Mode         int32  `json:"mode,omitempty"`
+	Language     string `json:"language,omitempty"`
+	SeatIndex    int32  `json:"seat_index,omitempty"`
+	IsSeatRandom bool   `json:"is_seat_random,omitempty"`
+	TeamID       int32  `json:"team_id,omitempty"`
+	IsReady      bool   `json:"is_ready,omitempty"`
 }
 
 // UserKickReqData 用户踢人。
