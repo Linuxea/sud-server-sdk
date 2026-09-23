@@ -97,16 +97,16 @@ func newAPICache(c *Client) *apiCache {
 }
 
 // config 返回缓存的 API 配置；未拉取过则同步拉取一次（并发去重）。
-// 拉取失败且无历史缓存时返回错误。
+// Client.Close 之后一律返回 ErrClosed（即使缓存仍在）。
 func (a *apiCache) config(ctx context.Context) (*APIConfig, error) {
 	a.mu.RLock()
 	cfg, closed := a.cfg, a.closed
 	a.mu.RUnlock()
-	if cfg != nil {
-		return cfg, nil
-	}
 	if closed {
 		return nil, ErrClosed
+	}
+	if cfg != nil {
+		return cfg, nil
 	}
 
 	// singleflight 简版：并发首次调用只发起一次拉取，其余等待结果
