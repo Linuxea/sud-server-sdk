@@ -37,6 +37,8 @@ type Client struct {
 	EntryScore *api.EntryScoreService
 	// LLM 大模型音色与 AI 角色
 	LLM *api.LLMService
+	// PushEvent 推送事件到游戏服务
+	PushEvent *api.PushEventService
 }
 
 // New 创建客户端。appID/appSecret 为 Sud 平台分配的凭证，
@@ -63,6 +65,7 @@ func New(appID, appSecret string, opts ...Option) *Client {
 	c.Order = api.NewOrderService(c)
 	c.EntryScore = api.NewEntryScoreService(c)
 	c.LLM = api.NewLLMService(c)
+	c.PushEvent = api.NewPushEventService(c)
 	return c
 }
 
