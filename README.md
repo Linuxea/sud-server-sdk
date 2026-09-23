@@ -168,3 +168,8 @@ replace github.com/linuxea/sud-server-sdk v0.0.0 => ./
 1. 根 module 打 tag（如 `git tag v1.0.0 && git push --tags`）
 2. `adapter/gin/go.mod` 中 `sud-server-sdk v0.0.0` 改为 `v1.0.0`
 3. 删除本地 `go.work` 后在 `adapter/gin` 下验证 `go build ./...` 可解析
+
+发布后重新生成 go.work 时**不再需要 replace**（`go work init . ./adapter/gin` 即可）：
+上面的 replace 只为 v0.0.0 占位版本兜底——该版本从未发布，Go 加载依赖图时
+可能去远程拉取而 404；require 改为真实存在的 tag 版本后仅 use 就能正常工作，
+旧的 replace 因版本不匹配也不再生效。
