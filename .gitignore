@@ -11,3 +11,7 @@ sud-server-sdk
 # 本地环境配置
 *.local.yaml
 .env
+
+# go.work 本地开发 workspace（克隆后自行生成，见 README）
+go.work
+go.work.sum
