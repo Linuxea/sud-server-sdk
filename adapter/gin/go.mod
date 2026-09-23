@@ -24,4 +24,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
+// 本 replace 仅用于同仓本地开发。
+// 发布前必须：删除下面的 replace，并把上面 require 的 sud-server-sdk 改为已打 tag
+// 的版本（根 module 打 tag 如 v1.0.0 后，本子模块即可直接依赖真实版本）。
 replace github.com/linuxea/sud-server-sdk => ../..

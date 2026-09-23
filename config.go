@@ -2,10 +2,10 @@
 // 出站（业务方调 Sud：API 查询、推送事件、下单等）与
 // 入站（业务方提供 HTTPS 回调：鉴权链、对局上报、异步通知等）。
 //
-// 快速接入：
+// 快速接入（请求/响应类型在 api 包，import sudapi "github.com/linuxea/sud-server-sdk/api"）：
 //
 //	client := sud.New(appID, appSecret)
-//	list, err := client.GameList.List(ctx, sud.GameListReq{Platform: 1})
+//	list, err := client.GameList.List(ctx, sudapi.GameListReq{Platform: 1})
 //
 //	srv := callback.NewServer(callback.Callbacks{
 //		GetSSToken: func(ctx context.Context, req callback.GetSSTokenReq) (*callback.GetSSTokenResp, error) { ... },

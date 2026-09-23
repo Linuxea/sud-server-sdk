@@ -28,8 +28,6 @@ const (
 	KeyGetGameReportInfo   URLKey = "get_game_report_info"
 	KeyGameReportInfoPage  URLKey = "get_game_report_info_page"
 	KeyQueryGameReportInfo URLKey = "query_game_report_info"
-	KeyGetPlayerResults    URLKey = "get_player_results"
-	KeyReportGameRoundBill URLKey = "report_game_round_bill"
 	KeyPushEvent           URLKey = "push_event"
 	KeyCreateOrder         URLKey = "create_order"
 	KeyBatchCreateOrder    URLKey = "batch_create_order"
@@ -43,4 +41,9 @@ const (
 	KeyLLMGetVoice          URLKey = "llm_get_voice"
 	KeyLLMCreateAICharacter URLKey = "llm_create_ai_character"
 	KeyLLMGetAICharacter    URLKey = "llm_get_ai_character"
+
+	// 以下 key 预留：配置接口会返回地址，但 SDK 暂未封装对应服务方法
+	// （get_player_results 获取玩家游戏结果、report_game_round_bill 上报每局消耗货币）。
+	KeyGetPlayerResults    URLKey = "get_player_results"
+	KeyReportGameRoundBill URLKey = "report_game_round_bill"
 )

@@ -1,10 +1,10 @@
 # sud-server-sdk
 
-Sud MGP（互动小游戏平台）服务端 Go SDK，封装 [Sud GitBook 文档](https://docs.sud.tech/zh-CN/app/Server/StartUp.html) 中**全部服务端接口**：业务方调 Sud 的出站 API + 业务方提供给 Sud 调用的 HTTPS 回调。
+Sud MGP（互动小游戏平台）服务端 Go SDK，封装 [Sud GitBook 文档](https://docs.sud.tech/zh-CN/app/Server/StartUp.html) 中的服务端接口：业务方调 Sud 的出站 API + 业务方提供给 Sud 调用的 HTTPS 回调。
 
 ## 特性
 
-- **全量覆盖**：出站 13 个 API、push_event 20 种事件、入站 7 个回调 + 15 种异步 notify
+- **高覆盖**：出站 16 个 API 方法、push_event 20 种事件、入站 7 个回调 + 15 种异步 notify（文档中另有 2 个接口 get_player_results / report_game_round_bill 暂未封装，地址 key 已预留）
 - **零第三方依赖**：主 module 仅用标准库（gin 适配器为独立 module）
 - **Go 惯用设计**：泛型统一请求封装、functional options、struct 组合（服务域平铺在 Client 上，NotifyCallbacks 可嵌入）、标准 middleware 验签、`errors.As` 友好错误
 - **全链路 context**、API 地址自动发现与缓存（含失败刷新回退）
