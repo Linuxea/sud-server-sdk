@@ -50,9 +50,9 @@ type APIConfigAPI struct {
 
 // APIConfigLLM 大模型服务接口地址。
 type APIConfigLLM struct {
-	CreateVoice     string `json:"create_voice"`
-	TrainVoice      string `json:"train_voice"`
-	GetVoice        string `json:"get_voice"`
+	CreateVoice       string `json:"create_voice"`
+	TrainVoice        string `json:"train_voice"`
+	GetVoice          string `json:"get_voice"`
 	CreateAICharacter string `json:"create_ai_character"`
 	GetAICharacter    string `json:"get_ai_character"`
 }

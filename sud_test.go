@@ -60,7 +60,9 @@ func TestClientPost(t *testing.T) {
 		_, _ = w.Write([]byte(`{"ret_code":0,"ret_msg":"","data":{"ok":1}}`))
 	})
 
-	var resp struct{ OK int `json:"ok"` }
+	var resp struct {
+		OK int `json:"ok"`
+	}
 	if err := c.Post(context.Background(), "push_event", map[string]string{"a": "b"}, &resp); err != nil {
 		t.Fatalf("Post: %v", err)
 	}
@@ -99,7 +101,9 @@ func TestClientPostRetry(t *testing.T) {
 		_, _ = w.Write([]byte(`{"ret_code":0,"ret_msg":"","data":{"ok":9}}`))
 	}, WithRetry(3, time.Millisecond))
 
-	var resp struct{ OK int `json:"ok"` }
+	var resp struct {
+		OK int `json:"ok"`
+	}
 	if err := c.Post(context.Background(), "push_event", nil, &resp); err != nil {
 		t.Fatalf("重试后应成功: %v", err)
 	}

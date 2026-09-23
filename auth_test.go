@@ -8,15 +8,15 @@ import (
 
 // golden 向量由 python hmac 独立计算（见阶段 2 记录），锁定签名串构造与算法不回归。
 const (
-	goldenAppID     = "1461564080052506636"
-	goldenSecret    = "test-app-secret"
-	goldenTS        = "1688464949817"
-	goldenNonce     = "keVJLJTItd1VBtGT"
-	goldenOutBody   = `{"app_id": "1461564080052506238","mg_id": "1461227817776713818","room_id": "9009"}`
-	goldenOutSig    = "6c83c0c0d430f987fdc903dde6ed42acc4f9a277"
-	goldenInBody    = `{"app_id": "1461564080052506238","mg_id": "1461227817776713818","room_id": "9009","round_id": "ce56b6lzi1a7-cehorlmy01pq-ckmfkba10iv7","currency_amount": "2", "timestamp": 1654079242000}`
-	goldenInTS      = "1654079242000"
-	goldenInSig     = "136cb2eeb55b0f642f57de8b044e8ae91bf01978"
+	goldenAppID       = "1461564080052506636"
+	goldenSecret      = "test-app-secret"
+	goldenTS          = "1688464949817"
+	goldenNonce       = "keVJLJTItd1VBtGT"
+	goldenOutBody     = `{"app_id": "1461564080052506238","mg_id": "1461227817776713818","room_id": "9009"}`
+	goldenOutSig      = "6c83c0c0d430f987fdc903dde6ed42acc4f9a277"
+	goldenInBody      = `{"app_id": "1461564080052506238","mg_id": "1461227817776713818","room_id": "9009","round_id": "ce56b6lzi1a7-cehorlmy01pq-ckmfkba10iv7","currency_amount": "2", "timestamp": 1654079242000}`
+	goldenInTS        = "1654079242000"
+	goldenInSig       = "136cb2eeb55b0f642f57de8b044e8ae91bf01978"
 	goldenSignContent = "1461564080052506636\n1688464949817\nkeVJLJTItd1VBtGT\n" + goldenOutBody + "\n"
 )
 

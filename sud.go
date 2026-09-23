@@ -8,20 +8,35 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/linuxea/sud-server-sdk/api"
 )
 
 // Client Sud 服务端 SDK 出站客户端。
-// 持有签名器、HTTP 执行器与 API 地址缓存，并实现 api.Poster 接口供各服务域组合使用。
+// 持有签名器、HTTP 执行器与 API 地址缓存，并实现 api.Poster 接口；
+// 各出站 API 服务域以组合字段形式暴露。
 //
 // 用法：
 //
 //	client := sud.New(appID, appSecret)
 //	defer client.Close()
+//	list, err := client.GameList.List(ctx, sudapi.GameListReq{Platform: sudapi.PlatformIOS})
 type Client struct {
 	cfg    Config
 	doer   Doer
 	signer *Signer
 	cache  *apiCache
+
+	// GameList 游戏列表/信息
+	GameList *api.GameListService
+	// Report 游戏上报查询（单个/分页）
+	Report *api.ReportService
+	// Order 游戏内付费订单
+	Order *api.OrderService
+	// EntryScore 带分入场查询（德州扑克/TeenPatti）
+	EntryScore *api.EntryScoreService
+	// LLM 大模型音色与 AI 角色
+	LLM *api.LLMService
 }
 
 // New 创建客户端。appID/appSecret 为 Sud 平台分配的凭证，
@@ -41,8 +56,21 @@ func New(appID, appSecret string, opts ...Option) *Client {
 		c.doer = &http.Client{Timeout: cfg.HTTPTimeout}
 	}
 	c.cache = newAPICache(c)
+
+	// 组合各出站服务域（Client 实现 api.Poster）
+	c.GameList = api.NewGameListService(c)
+	c.Report = api.NewReportService(c)
+	c.Order = api.NewOrderService(c)
+	c.EntryScore = api.NewEntryScoreService(c)
+	c.LLM = api.NewLLMService(c)
 	return c
 }
+
+// AppID 返回应用 id。
+func (c *Client) AppID() string { return c.cfg.AppID }
+
+// AppSecret 返回应用密钥。
+func (c *Client) AppSecret() string { return c.cfg.AppSecret }
 
 // Signer 返回签名器（供回调服务验签复用：callback.WithSigner(client.Signer())）。
 func (c *Client) Signer() *Signer { return c.signer }
