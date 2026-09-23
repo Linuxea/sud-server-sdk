@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -64,55 +65,109 @@ func appServerSign(appID, appSecret string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// ErrClosed Client.Close 之后继续使用时返回。
+var ErrClosed = fmt.Errorf("sud: 客户端已关闭")
+
 // apiCache API 地址缓存：惰性拉取 + 后台定时刷新 + 失败回退上次结果。
+//
+// 并发约定：
+//   - stop/stopped 在构造时预建，永不替换（消除字段写竞争）
+//   - closed/started/cfg/inflight 均由 mu 保护
+//   - Close 之后再调用 config 返回 ErrClosed，且不会启动后台协程（防泄漏）
 type apiCache struct {
 	client *Client
 
-	mu        sync.RWMutex
-	cfg       *APIConfig
-	fetchedAt time.Time
+	mu  sync.RWMutex
+	cfg *APIConfig
 
-	startOnce sync.Once
-	stop      chan struct{}
-	stopped   chan struct{}
+	stop    chan struct{}
+	stopped chan struct{}
+
+	closed   bool
+	started  bool
+	inflight chan struct{} // 首次并发拉取去重（singleflight 简版）
 }
 
 func newAPICache(c *Client) *apiCache {
-	return &apiCache{client: c}
+	return &apiCache{
+		client:  c,
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
+	}
 }
 
-// config 返回缓存的 API 配置；未拉取过则同步拉取一次。
+// config 返回缓存的 API 配置；未拉取过则同步拉取一次（并发去重）。
 // 拉取失败且无历史缓存时返回错误。
 func (a *apiCache) config(ctx context.Context) (*APIConfig, error) {
 	a.mu.RLock()
-	cfg := a.cfg
+	cfg, closed := a.cfg, a.closed
 	a.mu.RUnlock()
 	if cfg != nil {
 		return cfg, nil
 	}
-	if err := a.refresh(ctx); err != nil {
+	if closed {
+		return nil, ErrClosed
+	}
+
+	// singleflight 简版：并发首次调用只发起一次拉取，其余等待结果
+	a.mu.Lock()
+	if a.cfg != nil { // double check
+		cfg := a.cfg
+		a.mu.Unlock()
+		return cfg, nil
+	}
+	if a.closed {
+		a.mu.Unlock()
+		return nil, ErrClosed
+	}
+	call := a.inflight
+	first := call == nil
+	if first {
+		call = make(chan struct{})
+		a.inflight = call
+	}
+	a.mu.Unlock()
+
+	if !first {
+		select {
+		case <-call:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return a.config(ctx)
+	}
+
+	cfg, err := a.fetch(ctx)
+	a.mu.Lock()
+	if err == nil {
+		a.cfg = cfg
+	}
+	close(call)
+	a.inflight = nil
+	a.mu.Unlock()
+	if err != nil {
 		return nil, err
 	}
 	a.startBackgroundRefresh()
-	return a.cfg, nil
+	return cfg, nil
 }
 
-// refresh 强制重新拉取；失败时保留旧缓存。
-func (a *apiCache) refresh(ctx context.Context) error {
+// refresh 强制重新拉取；失败时保留旧缓存。成功返回新配置。
+func (a *apiCache) refresh(ctx context.Context) (*APIConfig, error) {
 	cfg, err := a.fetch(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	a.mu.Lock()
 	a.cfg = cfg
-	a.fetchedAt = time.Now()
 	a.mu.Unlock()
-	return nil
+	return cfg, nil
 }
 
 // fetch 实际请求配置服务。GET {APIConfigBase}/{HmacMD5(app_id)}，无认证头。
 func (a *apiCache) fetch(ctx context.Context) (*APIConfig, error) {
-	url := a.client.cfg.APIConfigBase + appServerSign(a.client.cfg.AppID, a.client.cfg.AppSecret)
+	base := strings.TrimSuffix(a.client.cfg.APIConfigBase, "/")
+	url := base + "/" + appServerSign(a.client.cfg.AppID, a.client.cfg.AppSecret)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -139,44 +194,58 @@ func (a *apiCache) fetch(ctx context.Context) (*APIConfig, error) {
 }
 
 // startBackgroundRefresh 按配置间隔启动后台刷新协程（仅启动一次）。
+// interval 非正值（含 0）不启动自动刷新。
 func (a *apiCache) startBackgroundRefresh() {
 	interval := a.client.cfg.APIConfigRefreshInterval
 	if interval <= 0 {
 		return
 	}
-	a.startOnce.Do(func() {
-		a.stop = make(chan struct{})
-		a.stopped = make(chan struct{})
-		go func() {
-			defer close(a.stopped)
-			ticker := time.NewTicker(interval)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ticker.C:
-					ctx, cancel := context.WithTimeout(context.Background(), a.client.cfg.HTTPTimeout)
-					_ = a.refresh(ctx) // 失败保留旧缓存
-					cancel()
-				case <-a.stop:
-					return
-				}
+	a.mu.Lock()
+	if a.started || a.closed {
+		a.mu.Unlock()
+		return
+	}
+	a.started = true
+	a.mu.Unlock()
+
+	go func() {
+		defer close(a.stopped)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), a.client.cfg.HTTPTimeout)
+				_, _ = a.refresh(ctx) // 失败保留旧缓存
+				cancel()
+			case <-a.stop:
+				return
 			}
-		}()
-	})
+		}
+	}()
 }
 
+// close 停止后台刷新。幂等：重复调用安全。
+// 在首次拉取之前 close 时后台协程从未启动，也不会再启动。
 func (a *apiCache) close() {
-	a.mu.RLock()
-	hasStop := a.stop != nil
-	a.mu.RUnlock()
-	if hasStop {
-		select {
-		case <-a.stop:
-		default:
-			close(a.stop)
+	a.mu.Lock()
+	if a.closed {
+		started := a.started
+		a.mu.Unlock()
+		if started {
+			<-a.stopped // 等待已在途的停止完成
 		}
-		<-a.stopped
+		return
 	}
+	a.closed = true
+	started := a.started
+	a.mu.Unlock()
+
+	if !started {
+		return
+	}
+	close(a.stop)
+	<-a.stopped
 }
 
 // truncateBody 响应体过长时截断，供错误信息携带。

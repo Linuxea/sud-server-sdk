@@ -84,10 +84,11 @@ func (c *Client) Close() { c.cache.close() }
 // APIConfig 手动强制刷新并返回 API 地址配置（正常使用无需调用，
 // Post 内部会按需拉取与刷新）。
 func (c *Client) APIConfig(ctx context.Context) (*APIConfig, error) {
-	if err := c.cache.refresh(ctx); err != nil {
+	cfg, err := c.cache.refresh(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return c.cache.config(ctx)
+	return cfg, nil
 }
 
 // apiRespShell 出站 API 的统一响应壳。
@@ -131,7 +132,7 @@ func (c *Client) Post(ctx context.Context, urlKey string, req any, resp any) err
 // retryWait 重试前的等待；同时按文档建议刷新一次 API 地址配置（失败保留旧缓存）。
 func (c *Client) retryWait(ctx context.Context, attempt int) error {
 	rctx, cancel := context.WithTimeout(context.Background(), c.cfg.HTTPTimeout)
-	_ = c.cache.refresh(rctx)
+	_, _ = c.cache.refresh(rctx)
 	cancel()
 	select {
 	case <-ctx.Done():
