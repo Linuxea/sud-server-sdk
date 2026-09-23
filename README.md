@@ -142,7 +142,6 @@ adapter 模块单独验证：`cd adapter/gin && go build ./... && go test ./...`
 
 ```
 go work init . ./adapter/gin
-go work edit -replace github.com/linuxea/sud-server-sdk@v0.0.0=./
 ```
 
 生成的 go.work 形如：
@@ -154,22 +153,14 @@ use (
 	.
 	./adapter/gin
 )
-
-replace github.com/linuxea/sud-server-sdk v0.0.0 => ./
 ```
 
-> 为什么需要 replace：仅靠 `use` 对"require 一个从未发布的 v0.0.0 占位版本"在
-> module graph 加载时覆盖不彻底（golang/go#50750 一族已知问题），必须配合
-> **带版本限定**的 replace；不带版本会与 use 冲突（报 "replaced at all versions"）。
-> 根 module 打 tag 后把 adapter 的 require 改为真实版本，此 replace 自动失效。
+> 历史：adapter 的 require 曾是未发布的 `v0.0.0` 占位，仅靠 `use` 在 module graph
+> 加载时覆盖不彻底（golang/go#50750 一族问题），需配合**带版本限定**的 replace；
+> require 改为真实 tag（v0.0.1）后 replace 自动失效，仅 use 即可。
 
 ### 发布
 
-1. 根 module 打 tag（如 `git tag v1.0.0 && git push --tags`）
-2. `adapter/gin/go.mod` 中 `sud-server-sdk v0.0.0` 改为 `v1.0.0`
+1. 根 module 打 tag（如 `git tag v1.0.1 && git push --tags`）
+2. `adapter/gin/go.mod` 中 `sud-server-sdk` 改为对应 tag 版本
 3. 删除本地 `go.work` 后在 `adapter/gin` 下验证 `go build ./...` 可解析
-
-发布后重新生成 go.work 时**不再需要 replace**（`go work init . ./adapter/gin` 即可）：
-上面的 replace 只为 v0.0.0 占位版本兜底——该版本从未发布，Go 加载依赖图时
-可能去远程拉取而 404；require 改为真实存在的 tag 版本后仅 use 就能正常工作，
-旧的 replace 因版本不匹配也不再生效。

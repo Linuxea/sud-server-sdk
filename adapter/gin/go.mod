@@ -1,17 +1,14 @@
 // 本地开发：仓库根的 go.work（不入库，克隆后按 README「开发」章节生成）负责把根
-// module 解析到本地目录，本文件无需 replace。注意 go.work 需要 use + 带版本的
-// replace 组合（仅 use 对未发布的 v0.0.0 占位依赖在 module graph 加载时覆盖不彻底，
+// module 解析到本地目录，本文件无需 replace。require 已指向真实发布 tag，
+// go.work 仅 use 即可（历史：v0.0.0 占位时代需 use + 带版本 replace 组合，
 // 见 golang/go#50750 一族问题）。
-//
-// 发布前唯一要做的：把下方 require 的 sud-server-sdk 改为根 module 已发布的 tag 版本
-// （根 module 打 tag 如 v1.0.0 后，将 v0.0.0 改为 v1.0.0 即可，外部消费者才能解析）。
 module github.com/linuxea/sud-server-sdk/adapter/gin
 
 go 1.19
 
 require (
 	github.com/gin-gonic/gin v1.7.2
-	github.com/linuxea/sud-server-sdk v0.0.0
+	github.com/linuxea/sud-server-sdk v0.0.1
 )
 
 require (
@@ -30,4 +27,3 @@ require (
 	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
-
