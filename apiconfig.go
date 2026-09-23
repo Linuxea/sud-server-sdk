@@ -152,6 +152,13 @@ func (a *apiCache) config(ctx context.Context) (*APIConfig, error) {
 	return cfg, nil
 }
 
+// current 返回当前缓存的配置（第二个返回值表示是否存在）。
+func (a *apiCache) current() (*APIConfig, bool) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.cfg, a.cfg != nil
+}
+
 // refresh 强制重新拉取；失败时保留旧缓存。成功返回新配置。
 func (a *apiCache) refresh(ctx context.Context) (*APIConfig, error) {
 	cfg, err := a.fetch(ctx)

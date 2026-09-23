@@ -91,11 +91,29 @@ func TestClientPostRetCodeError(t *testing.T) {
 	}
 }
 
-func TestClientPostRetry(t *testing.T) {
+func TestClientPostRetCodeNotRetried(t *testing.T) {
 	var calls int32
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if atomic.AddInt32(&calls, 1) <= 2 { // 前两次失败
-			_, _ = w.Write([]byte(`{"ret_code":500,"ret_msg":"server error","data":null}`))
+		atomic.AddInt32(&calls, 1)
+		_, _ = w.Write([]byte(`{"ret_code":1001,"ret_msg":"参数错误","data":null}`))
+	}, WithRetry(3, time.Millisecond))
+
+	err := c.Post(context.Background(), "push_event", nil, nil)
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.RetCode != 1001 {
+		t.Fatalf("应为业务错误: %v", err)
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("业务错误不应重试，实际请求 %d 次", got)
+	}
+}
+
+func TestClientPostRetryOnServerError(t *testing.T) {
+	var calls int32
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) <= 2 { // 前两次 5xx
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("bad gateway"))
 			return
 		}
 		_, _ = w.Write([]byte(`{"ret_code":0,"ret_msg":"","data":{"ok":9}}`))
