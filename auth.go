@@ -41,12 +41,37 @@ const (
 type Signer struct {
 	appID     string
 	appSecret string
-	now       func() time.Time // 可注入时钟，测试用
+	now       func() time.Time   // 可注入时钟
+	nonceFunc func(n int) string // 可注入 nonce 生成（默认 NewNonce）
 }
 
-// NewSigner 创建签名器。
-func NewSigner(appID, appSecret string) *Signer {
-	return &Signer{appID: appID, appSecret: appSecret, now: time.Now}
+// NewSigner 创建签名器。opts 可注入时钟与 nonce 生成（测试用）。
+func NewSigner(appID, appSecret string, opts ...SignerOption) *Signer {
+	s := &Signer{
+		appID:     appID,
+		appSecret: appSecret,
+		now:       time.Now,
+		nonceFunc: NewNonce,
+	}
+	for _, o := range opts {
+		if o != nil {
+			o(s)
+		}
+	}
+	return s
+}
+
+// SignerOption 签名器可选项。
+type SignerOption func(*Signer)
+
+// WithClock 注入时钟（默认 time.Now）。
+func WithClock(fn func() time.Time) SignerOption {
+	return func(s *Signer) { s.now = fn }
+}
+
+// WithNonceFunc 注入 nonce 生成函数（默认 NewNonce）。
+func WithNonceFunc(fn func(n int) string) SignerOption {
+	return func(s *Signer) { s.nonceFunc = fn }
 }
 
 // SignContent 构造签名串（四行，含结尾换行）。
@@ -64,7 +89,7 @@ func (s *Signer) Signature(timestamp, nonce string, body []byte) string {
 // Authorization 生成出站请求的 Authorization 头值，时间戳为当前毫秒。
 func (s *Signer) Authorization(body []byte) string {
 	timestamp := strconv.FormatInt(s.now().UnixMilli(), 10)
-	nonce := NewNonce(DefaultNonceLen)
+	nonce := s.nonceFunc(DefaultNonceLen)
 	return fmt.Sprintf(`%s app_id="%s",timestamp="%s",nonce="%s",signature="%s"`,
 		authorizationType, s.appID, timestamp, nonce, s.Signature(timestamp, nonce, body))
 }

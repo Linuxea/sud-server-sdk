@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // golden 向量由 python hmac 独立计算（见阶段 2 记录），锁定签名串构造与算法不回归。
@@ -35,18 +36,16 @@ func TestSignature(t *testing.T) {
 }
 
 func TestAuthorization(t *testing.T) {
-	s := NewSigner(goldenAppID, goldenSecret)
+	// 注入固定时钟与 nonce，对完整 Authorization 头做 golden 断言
+	fixedTime := time.UnixMilli(1688464949817)
+	s := NewSigner(goldenAppID, goldenSecret,
+		WithClock(func() time.Time { return fixedTime }),
+		WithNonceFunc(func(int) string { return goldenNonce }),
+	)
 	got := s.Authorization([]byte(goldenOutBody))
-	if !strings.HasPrefix(got, `Sud-Auth app_id="1461564080052506636",timestamp="`) {
-		t.Fatalf("Authorization 前缀不匹配: %s", got)
-	}
-	if !strings.HasSuffix(got, `",signature="`+goldenOutSig+`"`) {
-		// 后缀含 nonce 无法精确断言，仅校验签名信息结构
-		t.Logf("Authorization = %s（签名随 nonce 变化，仅做前缀校验）", got)
-	}
-	parts := strings.Split(got, ",")
-	if len(parts) != 4 {
-		t.Fatalf("Authorization 应含 4 段签名信息: %s", got)
+	want := `Sud-Auth app_id="1461564080052506636",timestamp="1688464949817",nonce="keVJLJTItd1VBtGT",signature="` + goldenOutSig + `"`
+	if got != want {
+		t.Fatalf("Authorization:\ngot  %s\nwant %s", got, want)
 	}
 }
 

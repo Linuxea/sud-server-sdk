@@ -22,6 +22,8 @@ func (f *fakePoster) Post(_ context.Context, key string, req any, resp any) erro
 			return err
 		}
 		f.reqBody = b
+	} else {
+		f.reqBody = nil
 	}
 	if resp != nil {
 		if err := json.Unmarshal([]byte(f.respData), resp); err != nil {

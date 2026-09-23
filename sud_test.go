@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -53,10 +54,9 @@ func newTestClient(t *testing.T, apiHandler http.HandlerFunc, opts ...Option) (*
 func TestClientPost(t *testing.T) {
 	var gotAuth, gotBody string
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		buf := make([]byte, r.ContentLength)
-		_, _ = r.Body.Read(buf)
+		body, _ := io.ReadAll(r.Body)
 		gotAuth = r.Header.Get(HeaderAuthorization)
-		gotBody = string(buf)
+		gotBody = string(body)
 		_, _ = w.Write([]byte(`{"ret_code":0,"ret_msg":"","data":{"ok":1}}`))
 	})
 
