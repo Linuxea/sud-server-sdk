@@ -62,8 +62,9 @@ type GameSettleObject struct {
 
 // ReportPlayer 上报中的玩家。
 type ReportPlayer struct {
-	UID  string `json:"uid"`
-	IsAI int32  `json:"is_ai"` // 0:普通用户 1:机器人
+	UID     string `json:"uid"`
+	IsAI    int32  `json:"is_ai"`              // 0:普通用户 1:机器人
+	AILevel int32  `json:"ai_level,omitempty"` // 0/1:简单 2:中级 3:高级
 }
 
 // ReportPlayerResult 上报中的玩家结算结果。
