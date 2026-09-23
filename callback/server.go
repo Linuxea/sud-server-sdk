@@ -265,7 +265,7 @@ func (s *Server) handleUpdateScore(w http.ResponseWriter, r *http.Request) {
 	s.writeResult(w, respData, err)
 }
 
-// handleNotify 异步通知入口（stage 7 实现）。
+// handleNotify 异步通知入口，分发逻辑见 notify.go。
 func (s *Server) handleNotify(w http.ResponseWriter, r *http.Request) {
 	s.dispatchNotify(w, r)
 }
