@@ -288,7 +288,7 @@ type GameSituationSummaryModel struct {
 // 未注册走 OnNotify 兜底，均无则记日志；应答恒为 SUCCESS。
 func (s *Server) dispatchNotify(w http.ResponseWriter, r *http.Request) {
 	var env notifyReq
-	if !s.decodeBody(w, r, &env) {
+	if !s.readJSON(w, r, &env, s.notifyFailResp()) {
 		return
 	}
 	ctx := r.Context()
@@ -340,7 +340,9 @@ func (s *Server) notifyHandled(ctx context.Context, event string, raw json.RawMe
 	return false
 }
 
-// callNotify 泛型分发：handler 为 nil 返回未处理；data 解析失败记日志且视为已处理。
+// callNotify 泛型分发：handler 为 nil 返回未处理；
+// data 解析失败记日志并把原始 payload 交给 OnNotify 兜底（Sud 可能新增字段导致
+// 强类型解析失败，兜底可保证业务仍能拿到原始数据），均视为已处理。
 func callNotify[T any](s *Server, ctx context.Context, event string, raw json.RawMessage, h func(context.Context, T)) bool {
 	if h == nil {
 		return false
@@ -348,6 +350,9 @@ func callNotify[T any](s *Server, ctx context.Context, event string, raw json.Ra
 	var data T
 	if err := json.Unmarshal(raw, &data); err != nil {
 		s.logger.Printf("sud notify: 解析 data 失败 event=%s: %v", event, err)
+		if s.cbs.OnNotify != nil {
+			s.cbs.OnNotify(ctx, event, raw)
+		}
 		return true
 	}
 	h(ctx, data)

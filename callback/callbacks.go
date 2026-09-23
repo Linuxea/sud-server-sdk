@@ -94,10 +94,10 @@ type GetUserInfoReq struct {
 	SSToken string `json:"ss_token"`
 }
 
-// 上报类型常量。
+// 上报类型常量（与 api 包对齐，值来自文档）。
 const (
-	ReportTypeGameStart  = "game_start"
-	ReportTypeGameSettle = "game_settle"
+	ReportTypeGameStart  = api.ReportTypeGameStart
+	ReportTypeGameSettle = api.ReportTypeGameSettle
 )
 
 // ReportGameInfoReq report_game_info 请求。
@@ -164,11 +164,13 @@ const (
 	errCodeDuplicateOrderID    int32 = 9001
 )
 
-// ErrInsufficientBalance 余额不足（update_score 返回）。
-var ErrInsufficientBalance = &CallbackError{RetCode: 1, RetMsg: "insufficient balance", SDKErrorCode: errCodeInsufficientBalance}
-
-// ErrDuplicateOrderID 订单 id 重复（update_score 返回）。
-var ErrDuplicateOrderID = &CallbackError{RetCode: 1, RetMsg: "duplicate order id", SDKErrorCode: errCodeDuplicateOrderID}
+// 哨兵错误：请勿修改其字段值，直接返回即可（需要自定义时用 NewCallbackError）。
+var (
+	// ErrInsufficientBalance 余额不足（update_score 返回，错误码 9000）。
+	ErrInsufficientBalance = &CallbackError{RetCode: 1, RetMsg: "insufficient balance", SDKErrorCode: errCodeInsufficientBalance}
+	// ErrDuplicateOrderID 订单 id 重复（update_score 返回，错误码 9001）。
+	ErrDuplicateOrderID = &CallbackError{RetCode: 1, RetMsg: "duplicate order id", SDKErrorCode: errCodeDuplicateOrderID}
+)
 
 // UpdateScoreReq update_score 请求。
 type UpdateScoreReq struct {
